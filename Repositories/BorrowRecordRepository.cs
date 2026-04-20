@@ -29,15 +29,6 @@ public class BorrowRecordRepository : IBorrowRecordRepository
             .ToListAsync();
     }
 
-    public async Task<BorrowRecord?> GetByIdAsync(Guid recordId)
-    {
-        return await _context.BorrowRecords
-            .AsNoTracking()
-            .Include(r => r.Book)
-            .Include(r => r.Member)
-            .FirstOrDefaultAsync(r => r.Id == recordId);
-    }
-
     public async Task<IEnumerable<BorrowRecord>> GetByMemberIdAsync(Guid memberId)
     {
         return await _context.BorrowRecords
@@ -47,6 +38,24 @@ public class BorrowRecordRepository : IBorrowRecordRepository
             .ToListAsync();
     }
 
+    public async Task<BorrowRecord?> GetActiveBorrowAsync(Guid bookId, Guid memberId)
+    {
+        return await _context.BorrowRecords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r =>
+                r.BookId == bookId &&
+                r.MemberId == memberId &&
+                r.Status == BorrowStatus.Borrowed);
+    }
+
+    public async Task<BorrowRecord?> GetActiveBorrowByBookIdAsync(Guid bookId)
+    {
+        return await _context.BorrowRecords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r =>
+                r.BookId == bookId &&
+                r.Status == BorrowStatus.Borrowed);
+    }
     public async Task<BorrowRecord> UpdateAsync(BorrowRecord record)
     {
         _context.BorrowRecords.Update(record);

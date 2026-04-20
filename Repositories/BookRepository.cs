@@ -13,7 +13,7 @@ public class BookRepository : IBookRepository
         _context = context;
     }
 
-    public async Task<Book> Create(Book book)
+    public async Task<Book> CreateAsync(Book book)
     {
         await _context.Books.AddAsync(book);
         await _context.SaveChangesAsync();

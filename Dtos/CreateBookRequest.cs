@@ -2,8 +2,8 @@ namespace LibraryBookBorrowingSystem.Dtos;
 
 public class CreateBookRequest
 {
-        public required string Title {get; set;}
-        public required string Author {get; set;}
-        public required string ISBN {get; set;}
+        public string Title {get; set;} = string.Empty;
+        public string Author {get; set;} = string.Empty;
+        public string ISBN {get; set;} = string.Empty;
         public int TotalCopies {get; set;}
 }
