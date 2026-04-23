@@ -10,4 +10,6 @@ public interface IBookRepository
     Task<Book> UpdateAsync(Book book);
     Task DeleteAsync(Book book);
     Task<bool> ExistsAsync(Guid bookId);
+    Task<bool> TryDecrementAvailableCopiesAsync(Guid bookId);
+    Task<bool> TryIncrementAvailableCopiesAsync(Guid bookId);
 }

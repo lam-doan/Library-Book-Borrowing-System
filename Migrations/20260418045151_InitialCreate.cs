@@ -46,38 +46,38 @@ namespace LibraryBookBorrowingSystem.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BookId = table.Column<int>(type: "INTEGER", nullable: false),
-                    MemberId = table.Column<int>(type: "INTEGER", nullable: false),
+                    BookId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MemberId = table.Column<Guid>(type: "TEXT", nullable: false),
                     BorrowDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                     ReturnDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    BookId1 = table.Column<Guid>(type: "TEXT", nullable: true),
-                    MemberId1 = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Status = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_BorrowRecords", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_BorrowRecords_Books_BookId1",
-                        column: x => x.BookId1,
+                        name: "FK_BorrowRecords_Books_BookId",
+                        column: x => x.BookId,
                         principalTable: "Books",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_BorrowRecords_Members_MemberId1",
-                        column: x => x.MemberId1,
+                        name: "FK_BorrowRecords_Members_MemberId",
+                        column: x => x.MemberId,
                         principalTable: "Members",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_BorrowRecords_BookId1",
+                name: "IX_BorrowRecords_BookId",
                 table: "BorrowRecords",
-                column: "BookId1");
+                column: "BookId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BorrowRecords_MemberId1",
+                name: "IX_BorrowRecords_MemberId",
                 table: "BorrowRecords",
-                column: "MemberId1");
+                column: "MemberId");
         }
 
         /// <inheritdoc />

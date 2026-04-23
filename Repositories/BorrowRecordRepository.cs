@@ -1,6 +1,5 @@
 using LibraryBookBorrowingSystem.Models;
 using LibraryBookBorrowingSystem.Data;
-using LibraryBookBorrowingSystem.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryBookBorrowingSystem.Repositories;
@@ -68,4 +67,3 @@ public class BorrowRecordRepository : IBorrowRecordRepository
         return await _context.BorrowRecords.AnyAsync(r => r.Id == recordId);
     }
 }
-

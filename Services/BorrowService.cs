@@ -1,7 +1,6 @@
-using System.Data.Common;
-using System.Runtime.Serialization;
 using LibraryBookBorrowingSystem.Data;
 using LibraryBookBorrowingSystem.Dtos;
+using LibraryBookBorrowingSystem.Exceptions;
 using LibraryBookBorrowingSystem.Models;
 using LibraryBookBorrowingSystem.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -10,14 +9,17 @@ namespace LibraryBookBorrowingSystem.Services;
 
 public class BorrowService : IBorrowService
 {
+    private readonly ApplicationDbContext _context;
     private readonly IBookRepository _bookRepository;
     private readonly IMemberRepository _memberRepository;
     private readonly IBorrowRecordRepository _borrowRecordRepository;
     public BorrowService(
+        ApplicationDbContext context,
         IBookRepository bookRepository,
         IMemberRepository memberRepository,
         IBorrowRecordRepository borrowRecordRepository)
     {
+        _context = context;
         _bookRepository = bookRepository;
         _memberRepository = memberRepository;
         _borrowRecordRepository = borrowRecordRepository;
@@ -26,69 +28,87 @@ public class BorrowService : IBorrowService
     // borrow a book
     public async Task<BorrowRecordDto> BorrowBookAsync(BorrowRequest request)
     {
-        // validate book
-        var book = await _bookRepository.GetByIdAsync(request.BookId)
-                ?? throw new Exception("Book not found.");
-        if (book.AvailableCopies <= 0)
-            throw new Exception("No copies available.");
+        var bookExists = await _bookRepository.ExistsAsync(request.BookId);
+        if (!bookExists)
+            throw new NotFoundException("Book not found.");
 
-        // validate member
-        var member = await _memberRepository.GetByIdAsync(request.MemberId)
-            ?? throw new Exception("Member not found.");
+        if (await _memberRepository.GetByIdAsync(request.MemberId) is null)
+            throw new NotFoundException("Member not found.");
 
-        // validate active borrow record
-        var activeBorrow = await _borrowRecordRepository.GetActiveBorrowAsync(request.BookId, request.MemberId);
-        if (activeBorrow != null)
-            throw new Exception("Member already borrowed this book.");
-
-        // create borrow record
-        var record = new BorrowRecord
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            Id = Guid.NewGuid(),
-            BookId = request.BookId,
-            MemberId = request.MemberId,
-            BorrowDate = DateTime.UtcNow,
-            Status = BorrowStatus.Borrowed
-        };
+            var activeBorrow = await _borrowRecordRepository.GetActiveBorrowAsync(request.BookId, request.MemberId);
+            if (activeBorrow != null)
+                throw new ConflictException("Member already borrowed this book.");
 
-        await _borrowRecordRepository.CreateAsync(record);
+            var copyReserved = await _bookRepository.TryDecrementAvailableCopiesAsync(request.BookId);
+            if (!copyReserved)
+            {
+                if (!await _bookRepository.ExistsAsync(request.BookId))
+                    throw new NotFoundException("Book not found.");
 
-        // update book copies
-        --book.AvailableCopies;
-        await _bookRepository.UpdateAsync(book);
+                throw new ConflictException("No copies available.");
+            }
 
-        // Service gets a BorrowRecord entity from repo and convert to BorrowRecordDto
-        // Controller returns this Dto to the client --> does not leak sensitive info
-        return new BorrowRecordDto(record);
+            var record = new BorrowRecord
+            {
+                Id = Guid.NewGuid(),
+                BookId = request.BookId,
+                MemberId = request.MemberId,
+                BorrowDate = DateTime.UtcNow,
+                Status = BorrowStatus.Borrowed
+            };
+
+            await _borrowRecordRepository.CreateAsync(record);
+
+            await transaction.CommitAsync();
+            return new BorrowRecordDto(record);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }   
 
     // return a book
     public async Task<BorrowRecordDto> ReturnBookAsync(ReturnRequest request)
     {
-        // validate book
-        var book = await _bookRepository.GetByIdAsync(request.BookId)
-                ?? throw new Exception("Book not found.");
-        if (book.AvailableCopies <= 0)
-            throw new Exception("No copies available.");
+        if (!await _bookRepository.ExistsAsync(request.BookId))
+            throw new NotFoundException("Book not found.");
 
-        // validate member
-        var member = await _memberRepository.GetByIdAsync(request.MemberId)
-            ?? throw new Exception("Member not found.");
+        if (await _memberRepository.GetByIdAsync(request.MemberId) is null)
+            throw new NotFoundException("Member not found.");
 
-        // validate active borrow record
         var record = await _borrowRecordRepository.GetActiveBorrowAsync(request.BookId, request.MemberId)
-            ?? throw new Exception("This member has not borrowed this book.");
+            ?? throw new ConflictException("This member has not borrowed this book.");
 
-        // update record
-        record.ReturnDate = DateTime.UtcNow;
-        record.Status = BorrowStatus.Returned;
-        await _borrowRecordRepository.UpdateAsync(record);
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            record.ReturnDate = DateTime.UtcNow;
+            record.Status = BorrowStatus.Returned;
+            await _borrowRecordRepository.UpdateAsync(record);
 
-         // update book copies
-        ++book.AvailableCopies;
-        await _bookRepository.UpdateAsync(book);
+            var copyReturned = await _bookRepository.TryIncrementAvailableCopiesAsync(request.BookId);
+            if (!copyReturned)
+            {
+                if (!await _bookRepository.ExistsAsync(request.BookId))
+                    throw new NotFoundException("Book not found.");
 
-        return new BorrowRecordDto(record);
+                throw new ConflictException("Cannot return a book with all copies already available.");
+            }
+
+            await transaction.CommitAsync();
+            return new BorrowRecordDto(record);
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
     }
 
     // get all borrow records
