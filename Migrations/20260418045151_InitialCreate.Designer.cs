@@ -55,19 +55,13 @@ namespace LibraryBookBorrowingSystem.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("BookId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid?>("BookId1")
+                    b.Property<Guid>("BookId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("BorrowDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("MemberId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid?>("MemberId1")
+                    b.Property<Guid>("MemberId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ReturnDate")
@@ -78,9 +72,9 @@ namespace LibraryBookBorrowingSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookId1");
+                    b.HasIndex("BookId");
 
-                    b.HasIndex("MemberId1");
+                    b.HasIndex("MemberId");
 
                     b.ToTable("BorrowRecords");
                 });
@@ -111,11 +105,15 @@ namespace LibraryBookBorrowingSystem.Migrations
                 {
                     b.HasOne("LibraryBookBorrowingSystem.Models.Book", "Book")
                         .WithMany("BorrowRecords")
-                        .HasForeignKey("BookId1");
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("LibraryBookBorrowingSystem.Models.Member", "Member")
                         .WithMany("BorrowRecords")
-                        .HasForeignKey("MemberId1");
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Book");
 

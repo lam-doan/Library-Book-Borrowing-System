@@ -1,5 +1,4 @@
 using LibraryBookBorrowingSystem.Data;
-using LibraryBookBorrowingSystem.Dtos;
 using LibraryBookBorrowingSystem.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,5 +49,25 @@ public class BookRepository : IBookRepository
     public Task<bool> ExistsAsync(Guid bookId)
     {
         return _context.Books.AnyAsync(r => r.Id == bookId); 
+    }
+
+    public async Task<bool> TryDecrementAvailableCopiesAsync(Guid bookId)
+    {
+        var affectedRows = await _context.Books
+            .Where(b => b.Id == bookId && b.AvailableCopies > 0)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(b => b.AvailableCopies, b => b.AvailableCopies - 1));
+
+        return affectedRows == 1;
+    }
+
+    public async Task<bool> TryIncrementAvailableCopiesAsync(Guid bookId)
+    {
+        var affectedRows = await _context.Books
+            .Where(b => b.Id == bookId && b.AvailableCopies < b.TotalCopies)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(b => b.AvailableCopies, b => b.AvailableCopies + 1));
+
+        return affectedRows == 1;
     }
 }

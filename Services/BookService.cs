@@ -1,10 +1,7 @@
-using System.Data.Common;
-using System.Runtime.Serialization;
-using LibraryBookBorrowingSystem.Data;
 using LibraryBookBorrowingSystem.Dtos;
-using LibraryBookBorrowingSystem.Repositories;
+using LibraryBookBorrowingSystem.Exceptions;
 using LibraryBookBorrowingSystem.Models;
-using Microsoft.EntityFrameworkCore;
+using LibraryBookBorrowingSystem.Repositories;
 
 namespace LibraryBookBorrowingSystem.Services;
 
@@ -24,17 +21,15 @@ public class BookService : IBookService
     // create a book
     public async Task<BookDto> CreateBookAsync(CreateBookRequest request)
     {
-        // validate TotalCopies
         if (request.TotalCopies <= 0)
-            throw new Exception("Total copies must be greater than 0.");
-            
-        // validate empty strings
-        if (string.IsNullOrEmpty(request.Title))
-            throw new Exception("Title must be required.");
-        if (string.IsNullOrEmpty(request.Author))
-            throw new Exception("Author must be required.");    
-        if (string.IsNullOrEmpty(request.ISBN))
-            throw new Exception("ISBN must be required.");
+            throw new BadRequestException("Total copies must be greater than 0.");
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+            throw new BadRequestException("Title is required.");
+        if (string.IsNullOrWhiteSpace(request.Author))
+            throw new BadRequestException("Author is required.");
+        if (string.IsNullOrWhiteSpace(request.ISBN))
+            throw new BadRequestException("ISBN is required.");
 
         var book = new Book
         {
@@ -52,36 +47,30 @@ public class BookService : IBookService
 
     public async Task<BookDto> UpdateBookAsync(Guid bookId, UpdateBookRequest request)
     {
-        // validate Title, Author, ISBN
-        if (string.IsNullOrEmpty(request.Title))
-            throw new Exception("Title is required.");
-        if (string.IsNullOrEmpty(request.Author))
-            throw new Exception("Author is required.");
-        if (string.IsNullOrEmpty(request.ISBN))
-            throw new Exception("ISBN is required.");
+        if (string.IsNullOrWhiteSpace(request.Title))
+            throw new BadRequestException("Title is required.");
+        if (string.IsNullOrWhiteSpace(request.Author))
+            throw new BadRequestException("Author is required.");
+        if (string.IsNullOrWhiteSpace(request.ISBN))
+            throw new BadRequestException("ISBN is required.");
 
-        // validate TotalCopies
         if (request.TotalCopies <= 0)
-            throw new Exception("Total copies must be greater than 0.");
-        
-        // validate AvailableCopies
+            throw new BadRequestException("Total copies must be greater than 0.");
+
         if (request.AvailableCopies < 0)
-            throw new Exception("Available copies must be greater than 0.");
+            throw new BadRequestException("Available copies must be greater than or equal to 0.");
         if (request.AvailableCopies > request.TotalCopies)
-            throw new Exception("Available copies must not exceed Total copoies.");
-        
-        // fetch existing book
+            throw new BadRequestException("Available copies must not exceed total copies.");
+
         var book = await _bookRepository.GetByIdAsync(bookId)
-            ?? throw new Exception("Book not found.");
-        
-        // update info
+            ?? throw new NotFoundException("Book not found.");
+
         book.Title = request.Title;
         book.Author = request.Author;
         book.ISBN = request.ISBN;
         book.TotalCopies = request.TotalCopies;
         book.AvailableCopies = request.AvailableCopies;
 
-        // save
         await _bookRepository.UpdateAsync(book);
         return new BookDto(book);
     }
@@ -95,20 +84,18 @@ public class BookService : IBookService
     public async Task<BookDto> GetByIdAsync(Guid bookId)
     {
         var book = await _bookRepository.GetByIdAsync(bookId)
-            ?? throw new Exception("Book not found.");
+            ?? throw new NotFoundException("Book not found.");
         return new BookDto(book);
     }
 
     public async Task DeleteBookAsync(Guid bookId)
     {
-        // fetch existing book
         var book = await _bookRepository.GetByIdAsync(bookId)
-            ?? throw new Exception("Book not found.");
-        
-        // if the book is currently borrowed
+            ?? throw new NotFoundException("Book not found.");
+
         var activeBorrow = await _borrowRecordRepository.GetActiveBorrowByBookIdAsync(bookId);
         if (activeBorrow != null)
-            throw new Exception("Cannot delete a book that is currently borrowed.");
+            throw new ConflictException("Cannot delete a book that is currently borrowed.");
 
         await _bookRepository.DeleteAsync(book);
     }

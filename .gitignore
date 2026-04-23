@@ -1,0 +1,32 @@
+# Build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE folders
+.vs/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local history / temp
+.history/
+
+# Logs
+*.log
+
+# Local SQLite database files
+*.db
+*.db-shm
+*.db-wal
+
+# EF migration bundles / artifacts
+artifacts/

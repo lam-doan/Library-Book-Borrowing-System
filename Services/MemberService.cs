@@ -1,10 +1,7 @@
-using System.Data.Common;
-using System.Runtime.Serialization;
-using LibraryBookBorrowingSystem.Data;
 using LibraryBookBorrowingSystem.Dtos;
-using LibraryBookBorrowingSystem.Repositories;
+using LibraryBookBorrowingSystem.Exceptions;
 using LibraryBookBorrowingSystem.Models;
-using Microsoft.EntityFrameworkCore;
+using LibraryBookBorrowingSystem.Repositories;
 using System.Net.Mail;
 
 namespace LibraryBookBorrowingSystem.Services;
@@ -23,15 +20,13 @@ public class MemberService : IMemberService
 
     public async Task<MemberDto> CreateMemberAsync(CreateMemberRequest request)
     {
-        // validate empty string
-        if (string.IsNullOrEmpty(request.FullName))
-            throw new Exception("Fullname is required.");
-        if (string.IsNullOrEmpty(request.Email))
-            throw new Exception("Email is required.");
-        
-        // validate valid email
+        if (string.IsNullOrWhiteSpace(request.FullName))
+            throw new BadRequestException("FullName is required.");
+        if (string.IsNullOrWhiteSpace(request.Email))
+            throw new BadRequestException("Email is required.");
+
         if (!MailAddress.TryCreate(request.Email, out _))
-            throw new Exception("Invalid email.");
+            throw new BadRequestException("Invalid email.");
 
         var member = new Member
         {   
@@ -47,39 +42,32 @@ public class MemberService : IMemberService
 
     public async Task<MemberDto> UpdateMemberAsync(Guid memberId, UpdateMemberRequest request)
     {
-        // validate empty string
-        if (string.IsNullOrEmpty(request.FullName))
-            throw new Exception("Fullname is required.");
-        if (string.IsNullOrEmpty(request.Email))
-            throw new Exception("Email is required.");  
+        if (string.IsNullOrWhiteSpace(request.FullName))
+            throw new BadRequestException("FullName is required.");
+        if (string.IsNullOrWhiteSpace(request.Email))
+            throw new BadRequestException("Email is required.");
 
-        // validate valid email
         if (!MailAddress.TryCreate(request.Email, out _))
-            throw new Exception("Invalid email.");
+            throw new BadRequestException("Invalid email.");
 
-        // fetch existing member
         var member = await _memberRepository.GetByIdAsync(memberId)
-            ?? throw new Exception("Member not found.");
-        
-        // update info
+            ?? throw new NotFoundException("Member not found.");
+
         member.FullName = request.FullName;
         member.Email = request.Email;
 
-        // save
         await _memberRepository.UpdateAsync(member);
         return new MemberDto(member);
     }
 
     public async Task DeleteMemberAsync(Guid memberId)
     {
-        // fetch existing member
         var member = await _memberRepository.GetByIdAsync(memberId)
-            ?? throw new Exception("Member not found.");
-        
-        // validate if member is currently borrowing any books
+            ?? throw new NotFoundException("Member not found.");
+
         var activeBorrows = await _borrowRecordRepository.GetByMemberIdAsync(memberId);
         if (activeBorrows.Any(r => r.Status == BorrowStatus.Borrowed))
-            throw new Exception("Cannot delete a member with active borrowed books.");
+            throw new ConflictException("Cannot delete a member with active borrowed books.");
 
         await _memberRepository.DeleteAsync(member);
     }
@@ -93,7 +81,7 @@ public class MemberService : IMemberService
     public async Task<MemberDto> GetByIdAsync(Guid memberId)
     {
         var member = await _memberRepository.GetByIdAsync(memberId)
-            ?? throw new Exception("Member not found.");
+            ?? throw new NotFoundException("Member not found.");
 
         return new MemberDto(member);
     }
