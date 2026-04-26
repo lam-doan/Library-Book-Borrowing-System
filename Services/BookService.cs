@@ -2,6 +2,7 @@ using LibraryBookBorrowingSystem.Dtos;
 using LibraryBookBorrowingSystem.Exceptions;
 using LibraryBookBorrowingSystem.Models;
 using LibraryBookBorrowingSystem.Repositories;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace LibraryBookBorrowingSystem.Services;
 
@@ -9,13 +10,16 @@ public class BookService : IBookService
 {
     private readonly IBookRepository _bookRepository;
     private readonly IBorrowRecordRepository _borrowRecordRepository;
+    private readonly IMemoryCache _cache;
 
     public BookService(
         IBookRepository bookRepository,
-        IBorrowRecordRepository borrowRecordRepository)
+        IBorrowRecordRepository borrowRecordRepository,
+        IMemoryCache cache)
     {
         _bookRepository = bookRepository;
         _borrowRecordRepository = borrowRecordRepository;
+        _cache = cache;
     }
 
     // create a book
@@ -42,6 +46,10 @@ public class BookService : IBookService
         };
 
         await _bookRepository.CreateAsync(book);
+
+        // invalidate all books cache since we added a new one
+        _cache.Remove("books_all");
+
         return new BookDto(book);
     }
 
@@ -72,20 +80,46 @@ public class BookService : IBookService
         book.AvailableCopies = request.AvailableCopies;
 
         await _bookRepository.UpdateAsync(book);
+
+        // invalidate cache for this book and the full list
+        _cache.Remove($"book_{bookId}");
+        _cache.Remove("books_all");
+
         return new BookDto(book);
     }
 
     public async Task<IEnumerable<BookDto>> GetAllAsync()
     {
+        // return from cache if available
+        if (_cache.TryGetValue("books_all", out IEnumerable<BookDto>? cached))
+            return cached!;
+
+        // cache miss - get from database
         var books = await _bookRepository.GetAllAsync();
-        return books.Select(r => new BookDto(r));
+        var dtos = books.Select(r => new BookDto(r)).ToList();
+
+        // store in cache for 5 minutes
+        _cache.Set("books_all", dtos, TimeSpan.FromMinutes(5));
+        return dtos;
     }
 
     public async Task<BookDto> GetByIdAsync(Guid bookId)
     {
+        var key = $"book_{bookId}";
+
+        // return from cache if available
+        if (_cache.TryGetValue(key, out BookDto? cached))
+            return cached!;
+
+        // cache miss - get from database
         var book = await _bookRepository.GetByIdAsync(bookId)
             ?? throw new NotFoundException("Book not found.");
-        return new BookDto(book);
+
+        var dto = new BookDto(book);
+
+        // store in cache for 5 minutes
+        _cache.Set(key, dto, TimeSpan.FromMinutes(5));
+        return dto;
     }
 
     public async Task DeleteBookAsync(Guid bookId)
@@ -98,5 +132,9 @@ public class BookService : IBookService
             throw new ConflictException("Cannot delete a book that is currently borrowed.");
 
         await _bookRepository.DeleteAsync(book);
+
+        // invalidate cache
+        _cache.Remove($"book_{bookId}");
+        _cache.Remove("books_all");
     }
 }

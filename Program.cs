@@ -5,6 +5,7 @@ using LibraryBookBorrowingSystem.Repositories;
 using LibraryBookBorrowingSystem.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,8 +24,12 @@ builder.Services.AddControllers()
             return new BadRequestObjectResult(new ErrorResponse(firstError));
         };
     });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// CACHING - registers IMemoryCache for dependency injection
+builder.Services.AddMemoryCache();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
