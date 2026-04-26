@@ -4,6 +4,7 @@ using LibraryBookBorrowingSystem.Exceptions;
 using LibraryBookBorrowingSystem.Models;
 using LibraryBookBorrowingSystem.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace LibraryBookBorrowingSystem.Services;
 
@@ -13,16 +14,20 @@ public class BorrowService : IBorrowService
     private readonly IBookRepository _bookRepository;
     private readonly IMemberRepository _memberRepository;
     private readonly IBorrowRecordRepository _borrowRecordRepository;
+    private readonly IMemoryCache _cache;
+
     public BorrowService(
         ApplicationDbContext context,
         IBookRepository bookRepository,
         IMemberRepository memberRepository,
-        IBorrowRecordRepository borrowRecordRepository)
+        IBorrowRecordRepository borrowRecordRepository,
+        IMemoryCache cache)
     {
         _context = context;
         _bookRepository = bookRepository;
         _memberRepository = memberRepository;
         _borrowRecordRepository = borrowRecordRepository;
+        _cache = cache;
     }
 
     // borrow a book
@@ -61,8 +66,12 @@ public class BorrowService : IBorrowService
             };
 
             await _borrowRecordRepository.CreateAsync(record);
-
             await transaction.CommitAsync();
+
+            // invalidate book cache since AvailableCopies changed
+            _cache.Remove($"book_{request.BookId}");
+            _cache.Remove("books_all");
+
             return new BorrowRecordDto(record);
         }
         catch
@@ -101,6 +110,11 @@ public class BorrowService : IBorrowService
             }
 
             await transaction.CommitAsync();
+
+            // invalidate book cache since AvailableCopies changed
+            _cache.Remove($"book_{request.BookId}");
+            _cache.Remove("books_all");
+
             return new BorrowRecordDto(record);
         }
         catch
@@ -108,7 +122,6 @@ public class BorrowService : IBorrowService
             await transaction.RollbackAsync();
             throw;
         }
-
     }
 
     // get all borrow records
