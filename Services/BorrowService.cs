@@ -4,6 +4,7 @@ using LibraryBookBorrowingSystem.Exceptions;
 using LibraryBookBorrowingSystem.Models;
 using LibraryBookBorrowingSystem.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace LibraryBookBorrowingSystem.Services;
 
@@ -13,16 +14,20 @@ public class BorrowService : IBorrowService
     private readonly IBookRepository _bookRepository;
     private readonly IMemberRepository _memberRepository;
     private readonly IBorrowRecordRepository _borrowRecordRepository;
+    private readonly IMemoryCache _cache;
+    private const string BooksCacheKey = "all_books_cache";
     public BorrowService(
         ApplicationDbContext context,
         IBookRepository bookRepository,
         IMemberRepository memberRepository,
-        IBorrowRecordRepository borrowRecordRepository)
+        IBorrowRecordRepository borrowRecordRepository,
+        IMemoryCache cache)
     {
         _context = context;
         _bookRepository = bookRepository;
         _memberRepository = memberRepository;
         _borrowRecordRepository = borrowRecordRepository;
+        _cache = cache;
     }
 
     // borrow a book
@@ -51,6 +56,8 @@ public class BorrowService : IBorrowService
                 throw new ConflictException("No copies available.");
             }
 
+            _cache.Remove("all_books_cache");
+
             var record = new BorrowRecord
             {
                 Id = Guid.NewGuid(),
@@ -61,7 +68,6 @@ public class BorrowService : IBorrowService
             };
 
             await _borrowRecordRepository.CreateAsync(record);
-
             await transaction.CommitAsync();
             return new BorrowRecordDto(record);
         }
@@ -99,6 +105,8 @@ public class BorrowService : IBorrowService
 
                 throw new ConflictException("Cannot return a book with all copies already available.");
             }
+
+            _cache.Remove("all_books_cache");
 
             await transaction.CommitAsync();
             return new BorrowRecordDto(record);

@@ -3460,19 +3460,19 @@
     ]
   },
   "packageFolders": {
-    "/Users/stephaniebraga/.nuget/packages/": {}
+    "/Users/lamdoan/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/stephaniebraga/SOURCE/Library-Book-Borrowing-System/LibraryBookBorrowingSystem.csproj",
+      "projectUniqueName": "/Users/lamdoan/Documents/CPSC449/LibraryBookBorrowingSystem/LibraryBookBorrowingSystem/LibraryBookBorrowingSystem.csproj",
       "projectName": "LibraryBookBorrowingSystem",
-      "projectPath": "/Users/stephaniebraga/SOURCE/Library-Book-Borrowing-System/LibraryBookBorrowingSystem.csproj",
-      "packagesPath": "/Users/stephaniebraga/.nuget/packages/",
-      "outputPath": "/Users/stephaniebraga/SOURCE/Library-Book-Borrowing-System/obj/",
+      "projectPath": "/Users/lamdoan/Documents/CPSC449/LibraryBookBorrowingSystem/LibraryBookBorrowingSystem/LibraryBookBorrowingSystem.csproj",
+      "packagesPath": "/Users/lamdoan/.nuget/packages/",
+      "outputPath": "/Users/lamdoan/Documents/CPSC449/LibraryBookBorrowingSystem/LibraryBookBorrowingSystem/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/stephaniebraga/.nuget/NuGet/NuGet.Config"
+        "/Users/lamdoan/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
@@ -3496,7 +3496,7 @@
         "auditLevel": "low",
         "auditMode": "all"
       },
-      "SdkAnalysisLevel": "10.0.200"
+      "SdkAnalysisLevel": "10.0.100"
     },
     "frameworks": {
       "net10.0": {
@@ -3544,7 +3544,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.203/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.102/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

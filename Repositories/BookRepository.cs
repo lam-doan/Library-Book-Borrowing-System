@@ -51,6 +51,16 @@ public class BookRepository : IBookRepository
         return _context.Books.AnyAsync(r => r.Id == bookId); 
     }
 
+    public async Task<IEnumerable<Book>> SearchAsync(string request)
+    {
+        return await _context.Books
+            .Where(b => 
+                b.Title.Contains(request) ||
+                b.Author.Contains(request) ||
+                b.ISBN.Contains(request))
+            .ToListAsync();
+    }
+
     public async Task<bool> TryDecrementAvailableCopiesAsync(Guid bookId)
     {
         var affectedRows = await _context.Books

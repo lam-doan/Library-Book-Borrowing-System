@@ -49,4 +49,17 @@ public class BooksController : ControllerBase
         await _bookService.DeleteBookAsync(id);
         return NoContent();
     }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest(new {error = "Query cannot be empty."});
+        }
+        
+        var results = await _bookService.SearchBookAsync(query);
+        return Ok(results);
+    }   
+
 }
